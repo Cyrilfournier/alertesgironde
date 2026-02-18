@@ -1,0 +1,14 @@
+{
+  "lastUpdate": "2026-02-18T16:00:41.840Z",
+  "alerteRougeDetectee": false,
+  "aujourd_hui": {
+    "date": "2026-02-18",
+    "niveau": 1,
+    "phenomenes": []
+  },
+  "demain": {
+    "date": "2026-02-19",
+    "niveau": 1,
+    "phenomenes": []
+  }
+}
