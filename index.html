@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigilance Météo France - Gironde (33)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 { 
+            color: white; 
+            text-align: center;
+            margin-bottom: 10px; 
+            font-size: 32px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .subtitle { 
+            color: rgba(255,255,255,0.9); 
+            text-align: center;
+            margin-bottom: 30px; 
+            font-size: 16px; 
+        }
+        
+        .period-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .period-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .period-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        .period-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .period-date {
+            font-size: 16px;
+            color: #718096;
+            margin-bottom: 20px;
+            font-weight: normal;
+        }
+        
+        .today { border-bottom-color: #4299e1; }
+        .tomorrow { border-bottom-color: #9f7aea; }
+        
+        .status-box {
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .loading { background: #edf2f7; color: #4a5568; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .red-alert {
+            background: linear-gradient(135deg, #fc5c65 0%, #eb3b5a 100%);
+            color: white;
+            animation: alertPulse 1s ease-in-out infinite;
+            border: 3px solid #c23616;
+        }
+        @keyframes alertPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        
+        .orange-alert { background: linear-gradient(135deg, #fd9644 0%, #fa8231 100%); color: white; }
+        .yellow-alert { background: linear-gradient(135deg, #fed330 0%, #f7b731 100%); color: #2d3748; }
+        .green-alert { background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%); color: white; }
+        .error { background: #fff5f5; color: #c53030; border: 2px solid #fc8181; font-size: 16px; font-weight: normal; }
+        
+        .details { margin-top: 15px; }
+        .details p { margin: 8px 0; color: #4a5568; font-size: 14px; line-height: 1.6; }
+        .details strong { color: #2d3748; }
+        
+        .alert-icon { font-size: 40px; margin-bottom: 8px; display: block; }
+        
+        .pheno { 
+            padding: 8px 12px; 
+            margin: 6px 0; 
+            background: #f7fafc; 
+            border-left: 4px solid #cbd5e0; 
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .pheno-red { border-left-color: #fc5c65; background: #fff5f5; font-weight: bold; }
+        .pheno-orange { border-left-color: #fd9644; background: #fffaf0; }
+        .pheno-yellow { border-left-color: #fed330; background: #fffff0; }
+        
+        .alert-summary {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .alert-summary h2 {
+            color: #2d3748;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #4a5568;
+        }
+        
+        .timestamp { 
+            text-align: center; 
+            color: white; 
+            font-size: 13px; 
+            margin-top: 20px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(102, 126, 234, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .loading-spinner {
+            font-size: 60px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner">⏳</div>
+            <p style="font-size: 20px; margin-top: 20px;">Chargement des données météo...</p>
+        </div>
+    </div>
+    
+    <div class="container" id="mainContent" style="display: none;">
+        <h1>🌤️ Vigilance Météo - Gironde (33)</h1>
+        <p class="subtitle">Surveillance automatique des alertes rouges</p>
+        
+        <!-- SUMMARY FOR AGENT -->
+        <div class="alert-summary" id="alertSummary">
+            <!-- Summary will be inserted here -->
+        </div>
+        
+        <div class="period-container" id="periodsContainer">
+            <!-- Periods will be inserted here -->
+        </div>
+        
+        <div class="timestamp" id="timestamp"></div>
+    </div>
+    
+    <script>
+        var API_KEY = 'eyJ4NXQiOiJZV0kxTTJZNE1qWTNOemsyTkRZeU5XTTRPV014TXpjek1UVmhNbU14T1RSa09ETXlOVEE0Tnc9PSIsImtpZCI6ImdhdGV3YXlfY2VydGlmaWNhdGVfYWxpYXMiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJDeXJpbC5mb3VybmllcjMzQGNhcmJvbi5zdXBlciIsImFwcGxpY2F0aW9uIjp7Im93bmVyIjoiQ3lyaWwuZm91cm5pZXIzMyIsInRpZXJRdW90YVR5cGUiOm51bGwsInRpZXIiOiJVbmxpbWl0ZWQiLCJuYW1lIjoiRGVmYXVsdEFwcGxpY2F0aW9uIiwiaWQiOjM3MjAyLCJ1dWlkIjoiYzg0NWYxMDQtYmVmZS00YWY5LWI5YmQtOTEyZTdlNWMxOWNiIn0sImlzcyI6Imh0dHBzOlwvXC9wb3J0YWlsLWFwaS5tZXRlb2ZyYW5jZS5mcjo0NDNcL29hdXRoMlwvdG9rZW4iLCJ0aWVySW5mbyI6eyI2MFJlcVBhck1pbiI6eyJ0aWVyUXVvdGFUeXBlIjoicmVxdWVzdENvdW50IiwiZ3JhcGhRTE1heENvbXBsZXhpdHkiOjAsImdyYXBoUUxNYXhEZXB0aCI6MCwic3RvcE9uUXVvdGFSZWFjaCI6dHJ1ZSwic3Bpa2VBcnJlc3RMaW1pdCI6MCwic3Bpa2VBcnJlc3RVbml0Ijoic2VjIn19LCJrZXl0eXBlIjoiUFJPRFVDVElPTiIsInN1YnNjcmliZWRBUElzIjpbeyJzdWJzY3JpYmVyVGVuYW50RG9tYWluIjoiY2FyYm9uLnN1cGVyIiwibmFtZSI6IkRvbm5lZXNQdWJsaXF1ZXNWaWdpbGFuY2UiLCJjb250ZXh0IjoiXC9wdWJsaWNcL0RQVmlnaWxhbmNlXC92MSIsInB1Ymxpc2hlciI6ImFkbWluIiwidmVyc2lvbiI6InYxIiwic3Vic2NyaXB0aW9uVGllciI6IjYwUmVxUGFyTWluIn1dLCJleHAiOjE4NjU5MzQwNzksInRva2VuX3R5cGUiOiJhcGlLZXkiLCJpYXQiOjE3NzEyNjEyNzksImp0aSI6IjAwYTVlMzI2LWY0NjMtNGM2Zi1hMTE4LTEzNjFkODZkYWNiMSJ9.Vdow6R51DixS11H5-eR-dg2uv7LyeLm_9mWilGERy49pO4OviTtv0nP4LIARWd_40yqhRnoSJAD7k_YsCtp7ULoExZddDztw127ARKr1S7CCVtywonH4GSJKrtn2z9slE9vVKXf02IpCo_PSfUe7rooce3x2dhA5vgz7jtjqUPmahpFkPE4-kAe0UIxZRhSb0g_x5jI8flByWSX94vKRfjfKL-4rRHjtL45zVdfS8UV4q3dR3RY6gNsN6dtWukeY3Ynyk_TbhXuR-BGbA_tCLXls01P1LJkFoWPhqaestEwFGz6qBZtmveoca0kYlA4Pc-Sr275B3IRL0wvXyT0FwQ==';
+        
+        var ALERT_LEVELS = {
+            1: { name: 'Vert', desc: 'Pas de vigilance', icon: '✅', cls: 'green-alert' },
+            2: { name: 'Jaune', desc: 'Soyez attentif', icon: '⚠️', cls: 'yellow-alert' },
+            3: { name: 'Orange', desc: 'Soyez très vigilant', icon: '⚠️', cls: 'orange-alert' },
+            4: { name: 'Rouge', desc: 'Vigilance absolue', icon: '🚨', cls: 'red-alert' }
+        };
+        
+        var PHENO = { 
+            '1': 'Vent violent', '2': 'Pluie-inondation', '3': 'Orages', '4': 'Crues', 
+            '5': 'Neige-verglas', '6': 'Canicule', '7': 'Grand froid', '8': 'Avalanches', '9': 'Vagues-submersion' 
+        };
+        
+        var DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+        var MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        
+        function formatDate(dateStr) {
+            var d = new Date(dateStr);
+            return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+        }
+        
+        function formatDateCap(dateStr) {
+            var d = new Date(dateStr);
+            var day = DAYS[d.getDay()];
+            return day.charAt(0).toUpperCase() + day.slice(1) + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+        }
+        
+        var periodsData = [];
+        
+        function processPeriod(period, index) {
+            var girondeData = null;
+            
+            if (period.timelaps && period.timelaps.domain_ids) {
+                var domains = period.timelaps.domain_ids;
+                
+                if (Array.isArray(domains)) {
+                    for (var i = 0; i < domains.length; i++) {
+                        if (String(domains[i].domain_id) === "33") {
+                            girondeData = domains[i];
+                            break;
+                        }
+                    }
+                } else {
+                    for (var key in domains) {
+                        if (domains.hasOwnProperty(key) && String(domains[key].domain_id) === "33") {
+                            girondeData = domains[key];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!girondeData) return null;
+            
+            var level = girondeData.max_color_id || 1;
+            var alertInfo = ALERT_LEVELS[level] || ALERT_LEVELS[1];
+            
+            var periodLabel = index === 0 ? 'AUJOURD\'HUI' : 'DEMAIN';
+            var periodClass = index === 0 ? 'today' : 'tomorrow';
+            var dateLabel = period.begin_time ? formatDateCap(period.begin_time) : '';
+            
+            // Store data for summary
+            periodsData.push({
+                label: periodLabel,
+                date: dateLabel,
+                level: level,
+                levelName: alertInfo.name,
+                items: girondeData.phenomenon_items
+            });
+            
+            var html = '<div class="period-card">';
+            html += '<div class="period-title ' + periodClass + '">' + periodLabel + '</div>';
+            if (dateLabel) html += '<div class="period-date">' + dateLabel + '</div>';
+            
+            html += '<div class="status-box ' + alertInfo.cls + '">';
+            html += '<span class="alert-icon">' + alertInfo.icon + '</span>';
+            
+            if (level === 4) {
+                html += 'ALERTE ROUGE';
+            } else {
+                html += 'Niveau ' + alertInfo.name;
+            }
+            html += '<div style="font-size: 14px; margin-top: 8px; font-weight: normal;">' + alertInfo.desc + '</div>';
+            html += '</div>';
+            
+            html += '<div class="details">';
+            html += '<p><strong>Niveau de vigilance:</strong> ' + alertInfo.name + ' (' + level + '/4)</p>';
+            
+            if (girondeData.phenomenon_items) {
+                var items = girondeData.phenomenon_items;
+                var hasItems = Array.isArray(items) ? items.length > 0 : Object.keys(items).length > 0;
+                
+                if (hasItems) {
+                    html += '<p style="margin-top: 12px;"><strong>Phénomènes:</strong></p>';
+                    
+                    var processItem = function(ph) {
+                        var pname = PHENO[ph.phenomenon_id] || 'Phénomène ' + ph.phenomenon_id;
+                        var plvl = ALERT_LEVELS[ph.phenomenon_max_color_id] || ALERT_LEVELS[1];
+                        var pcls = '';
+                        if (ph.phenomenon_max_color_id === 4) pcls = ' pheno-red';
+                        else if (ph.phenomenon_max_color_id === 3) pcls = ' pheno-orange';
+                        else if (ph.phenomenon_max_color_id === 2) pcls = ' pheno-yellow';
+                        html += '<div class="pheno' + pcls + '">' + pname + ': ' + plvl.name + '</div>';
+                    };
+                    
+                    if (Array.isArray(items)) {
+                        for (var i = 0; i < items.length; i++) {
+                            processItem(items[i]);
+                        }
+                    } else {
+                        for (var key in items) {
+                            if (items.hasOwnProperty(key)) {
+                                processItem(items[key]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            html += '</div></div>';
+            
+            return html;
+        }
+        
+        function generateSummary() {
+            var html = '<h2>📋 Résumé des Alertes</h2><div class="summary-text">';
+            
+            var redAlerts = [];
+            
+            for (var i = 0; i < periodsData.length; i++) {
+                var p = periodsData[i];
+                if (p.level === 4) {
+                    var phenomena = [];
+                    var items = p.items;
+                    
+                    if (items) {
+                        var processItem = function(ph) {
+                            if (ph.phenomenon_max_color_id === 4) {
+                                var pname = PHENO[ph.phenomenon_id] || 'Phénomène ' + ph.phenomenon_id;
+                                phenomena.push(pname);
+                            }
+                        };
+                        
+                        if (Array.isArray(items)) {
+                            for (var j = 0; j < items.length; j++) {
+                                processItem(items[j]);
+                            }
+                        } else {
+                            for (var key in items) {
+                                if (items.hasOwnProperty(key)) {
+                                    processItem(items[key]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    redAlerts.push({
+                        label: p.label,
+                        date: p.date,
+                        phenomena: phenomena
+                    });
+                }
+            }
+            
+            if (redAlerts.length > 0) {
+                html += '<strong style="color: #eb3b5a; font-size: 18px;">🚨 ALERTE ROUGE DÉTECTÉE</strong><br><br>';
+                
+                for (var i = 0; i < redAlerts.length; i++) {
+                    var alert = redAlerts[i];
+                    html += '<strong>' + alert.label + ' (' + alert.date + '):</strong><br>';
+                    html += 'Niveau Rouge (4/4) - Vigilance absolue<br>';
+                    if (alert.phenomena.length > 0) {
+                        html += 'Phénomènes en rouge: ' + alert.phenomena.join(', ') + '<br>';
+                    }
+                    if (i < redAlerts.length - 1) html += '<br>';
+                }
+            } else {
+                var hasOrange = false;
+                for (var i = 0; i < periodsData.length; i++) {
+                    if (periodsData[i].level === 3) {
+                        hasOrange = true;
+                        break;
+                    }
+                }
+                
+                if (hasOrange) {
+                    html += '<strong style="color: #fd9644;">⚠️ Alerte Orange</strong><br>';
+                    html += 'Pas d\'alerte rouge actuellement.';
+                } else {
+                    html += '<strong style="color: #20bf6b;">✅ Pas d\'alerte rouge</strong><br>';
+                    html += 'Situation normale - Vigilance de niveau ' + periodsData[0].levelName + '.';
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function checkAlert() {
+            fetch('https://public-api.meteofrance.fr/public/DPVigilance/v1/cartevigilance/encours', {
+                headers: { 'apikey': API_KEY }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                console.log('API Response:', data);
+                
+                periodsData = [];
+                var container = document.getElementById('periodsContainer');
+                var html = '';
+                
+                if (data.product && data.product.periods && data.product.periods.length > 0) {
+                    for (var i = 0; i < Math.min(data.product.periods.length, 2); i++) {
+                        var periodHtml = processPeriod(data.product.periods[i], i);
+                        if (periodHtml) {
+                            html += periodHtml;
+                        }
+                    }
+                }
+                
+                if (html) {
+                    container.innerHTML = html;
+                    document.getElementById('alertSummary').innerHTML = generateSummary();
+                } else {
+                    container.innerHTML = '<div class="period-card"><div class="status-box error">Gironde (33) introuvable dans les données</div></div>';
+                }
+                
+                document.getElementById('timestamp').textContent = 'Dernière mise à jour: ' + new Date().toLocaleString('fr-FR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: 'Europe/Paris'
+                });
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            })
+            .catch(function(err) {
+                console.error('Error:', err);
+                document.getElementById('periodsContainer').innerHTML = '<div class="period-card"><div class="status-box error">Erreur: ' + err.message + '</div></div>';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            });
+        }
+        
+        checkAlert();
+        setInterval(checkAlert, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
