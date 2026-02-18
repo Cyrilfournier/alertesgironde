@@ -3,10 +3,10 @@ name: Update Météo Alerts
 on:
   schedule:
     - cron: '0 5 * * *'  # 6h Paris (5h UTC) tous les jours
-  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:  # Permet de lancer manuellement
 
 jobs:
-  update-alerts:
+  scrape-alerts:
     runs-on: ubuntu-latest
     
     steps:
@@ -18,24 +18,11 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Fetch Météo France API
-        env:
-          METEO_API_KEY: ${{ secrets.METEO_API_KEY }}
-        run: |
-          curl -H "Authorization: Bearer $METEO_API_KEY" \
-            -H "Accept: application/json" \
-            https://public-api.meteofrance.fr/public/DPVigilance/v1/textesvigilance/encours \
-            > alerts-raw.json
-      - name: Debug - Show raw API response
-        run: |
-          echo "=== Structure de la réponse API ==="
-          cat alerts-raw.json | head -100
-          echo ""
-          echo "=== Fichier complet (premiers 2000 caractères) ==="
-          cat alerts-raw.json | head -c 2000
-          
-      - name: Parse alerts and generate summary
-        run: node scripts/parse-alerts.js
+      - name: Install dependencies
+        run: npm install puppeteer
+      
+      - name: Scrape alerts from website
+        run: node scripts/scrape-alerts.js
       
       - name: Commit and push if changed
         run: |
