@@ -1,0 +1,8 @@
+{
+  "name": "alertesgironde",
+  "version": "1.0.0",
+  "description": "Scraping des alertes météo Gironde",
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}
