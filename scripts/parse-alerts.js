@@ -1,84 +1,98 @@
+const puppeteer = require('puppeteer');
 const fs = require('fs');
 
-// Lire le fichier JSON brut de l'API
-const rawData = JSON.parse(fs.readFileSync('alerts-raw.json', 'utf8'));
-
-// Fonction pour trouver les alertes pour Gironde (33)
-function parseAlertsForGironde(data) {
-  const result = {
-    lastUpdate: new Date().toISOString(),
-    alerteRougeDetectee: false,
-    aujourd_hui: {
-      date: new Date().toISOString().split('T')[0],
-      niveau: 1,
-      phenomenes: []
-    },
-    demain: {
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      niveau: 1,
-      phenomenes: []
+(async () => {
+  console.log('🌐 Lancement du navigateur...');
+  
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+  
+  const page = await browser.newPage();
+  
+  console.log('📡 Chargement de la page...');
+  await page.goto('https://cyrilfournier.github.io/alertesgironde/', {
+    waitUntil: 'networkidle2',
+    timeout: 30000
+  });
+  
+  // Attendre que les données soient chargées
+  console.log('⏳ Attente du chargement des données...');
+  await page.waitForTimeout(5000); // Attendre 5 secondes pour que le JS charge les données
+  
+  console.log('🔍 Extraction des données...');
+  
+  // Extraire les données depuis la page
+  const alertData = await page.evaluate(() => {
+    const result = {
+      lastUpdate: new Date().toISOString(),
+      alerteRougeDetectee: false,
+      aujourd_hui: {
+        date: new Date().toISOString().split('T')[0],
+        niveau: 1,
+        phenomenes: 'Aucun'
+      },
+      demain: {
+        date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        niveau: 1,
+        phenomenes: 'Aucun'
+      }
+    };
+    
+    // Chercher le texte "ALERTE ROUGE DÉTECTÉE"
+    const pageText = document.body.innerText;
+    if (pageText.includes('ALERTE ROUGE DÉTECTÉE') || pageText.includes('🚨')) {
+      result.alerteRougeDetectee = true;
     }
-  };
-
-  // L'API retourne un objet avec les départements
-  // Structure typique: { "33": { "phenomenes": [...] } }
-  
-  if (!data || !data['33']) {
-    console.log('No data for Gironde (33)');
-    return result;
-  }
-
-  const girondeData = data['33'];
-  
-  // Parser les phénomènes pour aujourd'hui et demain
-  if (girondeData.phenomenes && Array.isArray(girondeData.phenomenes)) {
-    girondeData.phenomenes.forEach(pheno => {
-      const niveau = pheno.niveau_vigilance || 1;
-      const phenomene = pheno.nom || 'Inconnu';
-      const echeance = pheno.echeance || 'J'; // J = aujourd'hui, J1 = demain
-      
-      if (echeance === 'J') {
-        result.aujourd_hui.niveau = Math.max(result.aujourd_hui.niveau, niveau);
-        if (niveau >= 2) {
-          result.aujourd_hui.phenomenes.push(phenomene);
-        }
-      } else if (echeance === 'J1') {
-        result.demain.niveau = Math.max(result.demain.niveau, niveau);
-        if (niveau >= 2) {
-          result.demain.phenomenes.push(phenomene);
-        }
-      }
-      
-      // Détecter alerte rouge
-      if (niveau === 4) {
+    
+    // Chercher "AUJOURD'HUI" et extraire les infos
+    const aujourdHuiMatch = pageText.match(/AUJOURD['']HUI[^\n]*Niveau\s+(\w+)[^\n]*Phénomènes[^\n]*:\s*([^\n]+)/i);
+    if (aujourdHuiMatch) {
+      const niveauText = aujourdHuiMatch[1].toLowerCase();
+      if (niveauText.includes('rouge') || niveauText === '4') {
+        result.aujourd_hui.niveau = 4;
         result.alerteRougeDetectee = true;
+      } else if (niveauText.includes('orange') || niveauText === '3') {
+        result.aujourd_hui.niveau = 3;
+      } else if (niveauText.includes('jaune') || niveauText === '2') {
+        result.aujourd_hui.niveau = 2;
       }
-    });
+      result.aujourd_hui.phenomenes = aujourdHuiMatch[2].trim();
+    }
+    
+    // Chercher "DEMAIN" et extraire les infos
+    const demainMatch = pageText.match(/DEMAIN[^\n]*Niveau\s+(\w+)[^\n]*Phénomènes[^\n]*:\s*([^\n]+)/i);
+    if (demainMatch) {
+      const niveauText = demainMatch[1].toLowerCase();
+      if (niveauText.includes('rouge') || niveauText === '4') {
+        result.demain.niveau = 4;
+        result.alerteRougeDetectee = true;
+      } else if (niveauText.includes('orange') || niveauText === '3') {
+        result.demain.niveau = 3;
+      } else if (niveauText.includes('jaune') || niveauText === '2') {
+        result.demain.niveau = 2;
+      }
+      result.demain.phenomenes = demainMatch[2].trim();
+    }
+    
+    return result;
+  });
+  
+  console.log('✅ Données extraites:', JSON.stringify(alertData, null, 2));
+  
+  // Sauvegarder dans alerts.json
+  fs.writeFileSync('alerts.json', JSON.stringify(alertData, null, 2));
+  
+  await browser.close();
+  
+  console.log('🎉 Scraping terminé avec succès !');
+  
+  // Afficher si alerte rouge détectée
+  if (alertData.alerteRougeDetectee) {
+    console.log('🚨 ALERTE ROUGE DÉTECTÉE ! 🚨');
   }
-  
-  // Convertir les tableaux de phénomènes en strings
-  result.aujourd_hui.phenomenes = result.aujourd_hui.phenomenes.join(', ') || 'Aucun';
-  result.demain.phenomenes = result.demain.phenomenes.join(', ') || 'Aucun';
-  
-  return result;
-}
-
-// Parser et sauvegarder
-try {
-  const alerts = parseAlertsForGironde(rawData);
-  fs.writeFileSync('alerts.json', JSON.stringify(alerts, null, 2));
-  console.log('✅ Alerts updated successfully');
-  console.log(JSON.stringify(alerts, null, 2));
-} catch (error) {
-  console.error('❌ Error parsing alerts:', error);
-  // Créer un fichier par défaut en cas d'erreur
-  const defaultAlerts = {
-    lastUpdate: new Date().toISOString(),
-    error: error.message,
-    alerteRougeDetectee: false,
-    aujourd_hui: { date: new Date().toISOString().split('T')[0], niveau: 1, phenomenes: 'Erreur' },
-    demain: { date: new Date(Date.now() + 86400000).toISOString().split('T')[0], niveau: 1, phenomenes: 'Erreur' }
-  };
-  fs.writeFileSync('alerts.json', JSON.stringify(defaultAlerts, null, 2));
+})().catch(error => {
+  console.error('❌ Erreur lors du scraping:', error);
   process.exit(1);
-}
+});
