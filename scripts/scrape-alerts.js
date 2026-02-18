@@ -22,7 +22,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
   // Attendre que les données soient chargées
   console.log('⏳ Attente du chargement des données...');
-  await sleep(5000); // Attendre 5 secondes pour que le JS charge les données
+  await sleep(5000);
   
   console.log('🔍 Extraction des données...');
   
@@ -43,43 +43,45 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
       }
     };
     
-    // Chercher le texte "ALERTE ROUGE DÉTECTÉE"
+    // Obtenir tout le texte de la page
     const pageText = document.body.innerText;
     
-    console.log('Page text preview:', pageText.substring(0, 500));
-    
+    // Chercher "ALERTE ROUGE DÉTECTÉE"
     if (pageText.includes('ALERTE ROUGE DÉTECTÉE') || pageText.includes('🚨')) {
       result.alerteRougeDetectee = true;
     }
     
-    // Chercher "AUJOURD'HUI" et extraire les infos
-    const aujourdHuiMatch = pageText.match(/AUJOURD['']HUI[^\n]*Niveau\s+(\w+)[^\n]*Phénomènes[^\n]*:\s*([^\n]+)/i);
+    // Parser AUJOURD'HUI
+    // Format: "AUJOURD'HUI (): Niveau Rouge (4/4)" ou "Niveau Orange (3/4)" etc.
+    const aujourdHuiMatch = pageText.match(/AUJOURD['']HUI\s*\([^)]*\):\s*Niveau\s+(Rouge|Orange|Jaune|Vert)\s*\((\d)\/4\)[^\n]*\n\s*Phénomènes en (?:rouge|orange|jaune):\s*([^\n]+)/i);
+    
     if (aujourdHuiMatch) {
-      const niveauText = aujourdHuiMatch[1].toLowerCase();
-      if (niveauText.includes('rouge') || niveauText === '4') {
-        result.aujourd_hui.niveau = 4;
+      const couleur = aujourdHuiMatch[1].toLowerCase();
+      const niveau = parseInt(aujourdHuiMatch[2]);
+      const phenomenes = aujourdHuiMatch[3].trim();
+      
+      result.aujourd_hui.niveau = niveau;
+      result.aujourd_hui.phenomenes = phenomenes;
+      
+      if (niveau === 4) {
         result.alerteRougeDetectee = true;
-      } else if (niveauText.includes('orange') || niveauText === '3') {
-        result.aujourd_hui.niveau = 3;
-      } else if (niveauText.includes('jaune') || niveauText === '2') {
-        result.aujourd_hui.niveau = 2;
       }
-      result.aujourd_hui.phenomenes = aujourdHuiMatch[2].trim();
     }
     
-    // Chercher "DEMAIN" et extraire les infos
-    const demainMatch = pageText.match(/DEMAIN[^\n]*Niveau\s+(\w+)[^\n]*Phénomènes[^\n]*:\s*([^\n]+)/i);
+    // Parser DEMAIN
+    const demainMatch = pageText.match(/DEMAIN\s*\([^)]*\):\s*Niveau\s+(Rouge|Orange|Jaune|Vert)\s*\((\d)\/4\)[^\n]*\n\s*Phénomènes en (?:rouge|orange|jaune):\s*([^\n]+)/i);
+    
     if (demainMatch) {
-      const niveauText = demainMatch[1].toLowerCase();
-      if (niveauText.includes('rouge') || niveauText === '4') {
-        result.demain.niveau = 4;
+      const couleur = demainMatch[1].toLowerCase();
+      const niveau = parseInt(demainMatch[2]);
+      const phenomenes = demainMatch[3].trim();
+      
+      result.demain.niveau = niveau;
+      result.demain.phenomenes = phenomenes;
+      
+      if (niveau === 4) {
         result.alerteRougeDetectee = true;
-      } else if (niveauText.includes('orange') || niveauText === '3') {
-        result.demain.niveau = 3;
-      } else if (niveauText.includes('jaune') || niveauText === '2') {
-        result.demain.niveau = 2;
       }
-      result.demain.phenomenes = demainMatch[2].trim();
     }
     
     return result;
@@ -97,6 +99,10 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   // Afficher si alerte rouge détectée
   if (alertData.alerteRougeDetectee) {
     console.log('🚨 ALERTE ROUGE DÉTECTÉE ! 🚨');
+    console.log(`📍 AUJOURD'HUI: Niveau ${alertData.aujourd_hui.niveau} - ${alertData.aujourd_hui.phenomenes}`);
+    console.log(`📍 DEMAIN: Niveau ${alertData.demain.niveau} - ${alertData.demain.phenomenes}`);
+  } else {
+    console.log('✅ Pas d\'alerte rouge');
   }
 })().catch(error => {
   console.error('❌ Erreur lors du scraping:', error);
