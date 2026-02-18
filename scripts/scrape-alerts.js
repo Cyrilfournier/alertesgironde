@@ -1,6 +1,9 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
+// Fonction helper pour attendre
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 (async () => {
   console.log('🌐 Lancement du navigateur...');
   
@@ -19,7 +22,7 @@ const fs = require('fs');
   
   // Attendre que les données soient chargées
   console.log('⏳ Attente du chargement des données...');
-  await page.waitForTimeout(5000); // Attendre 5 secondes pour que le JS charge les données
+  await sleep(5000); // Attendre 5 secondes pour que le JS charge les données
   
   console.log('🔍 Extraction des données...');
   
@@ -42,6 +45,9 @@ const fs = require('fs');
     
     // Chercher le texte "ALERTE ROUGE DÉTECTÉE"
     const pageText = document.body.innerText;
+    
+    console.log('Page text preview:', pageText.substring(0, 500));
+    
     if (pageText.includes('ALERTE ROUGE DÉTECTÉE') || pageText.includes('🚨')) {
       result.alerteRougeDetectee = true;
     }
