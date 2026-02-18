@@ -26,7 +26,14 @@ jobs:
             -H "Accept: application/json" \
             https://public-api.meteofrance.fr/public/DPVigilance/v1/textesvigilance/encours \
             > alerts-raw.json
-      
+      - name: Debug - Show raw API response
+        run: |
+          echo "=== Structure de la réponse API ==="
+          cat alerts-raw.json | head -100
+          echo ""
+          echo "=== Fichier complet (premiers 2000 caractères) ==="
+          cat alerts-raw.json | head -c 2000
+          
       - name: Parse alerts and generate summary
         run: node scripts/parse-alerts.js
       
