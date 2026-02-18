@@ -1,0 +1,43 @@
+name: Update Météo Alerts
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 6h Paris (5h UTC) tous les jours
+  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+
+jobs:
+  update-alerts:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Fetch Météo France API
+        env:
+          METEO_API_KEY: ${{ secrets.METEO_API_KEY }}
+        run: |
+          curl -H "Authorization: Bearer $METEO_API_KEY" \
+            -H "Accept: application/json" \
+            https://public-api.meteofrance.fr/public/DPVigilance/v1/textesvigilance/encours \
+            > alerts-raw.json
+      
+      - name: Parse alerts and generate summary
+        run: node scripts/parse-alerts.js
+      
+      - name: Commit and push if changed
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add alerts.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🤖 Update alerts - $(date +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
