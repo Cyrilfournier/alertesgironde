@@ -1,13 +1,13 @@
 {
-  "lastUpdate": "2026-02-24T05:56:35.623Z",
+  "lastUpdate": "2026-02-25T05:58:44.168Z",
   "alerteRougeDetectee": false,
   "aujourd_hui": {
-    "date": "2026-02-24",
+    "date": "2026-02-25",
     "niveau": 1,
     "phenomenes": "Aucun"
   },
   "demain": {
-    "date": "2026-02-25",
+    "date": "2026-02-26",
     "niveau": 1,
     "phenomenes": "Aucun"
   }
