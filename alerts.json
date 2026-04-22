@@ -1,13 +1,13 @@
 {
-  "lastUpdate": "2026-04-21T06:56:50.662Z",
+  "lastUpdate": "2026-04-22T06:55:53.922Z",
   "alerteRougeDetectee": false,
   "aujourd_hui": {
-    "date": "2026-04-21",
+    "date": "2026-04-22",
     "niveau": 1,
     "phenomenes": "Aucun"
   },
   "demain": {
-    "date": "2026-04-22",
+    "date": "2026-04-23",
     "niveau": 1,
     "phenomenes": "Aucun"
   }
