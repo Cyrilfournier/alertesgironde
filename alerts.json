@@ -1,14 +1,14 @@
 {
-  "lastUpdate": "2026-06-20T08:19:39.145Z",
-  "alerteRougeDetectee": false,
+  "lastUpdate": "2026-06-21T08:55:20.247Z",
+  "alerteRougeDetectee": true,
   "aujourd_hui": {
-    "date": "2026-06-20",
-    "niveau": 1,
-    "phenomenes": "Aucun"
+    "date": "2026-06-21",
+    "niveau": 4,
+    "phenomenes": "Canicule"
   },
   "demain": {
-    "date": "2026-06-21",
-    "niveau": 1,
-    "phenomenes": "Aucun"
+    "date": "2026-06-22",
+    "niveau": 4,
+    "phenomenes": "Canicule"
   }
 }
