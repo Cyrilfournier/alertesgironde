@@ -1,13 +1,13 @@
 {
-  "lastUpdate": "2026-06-22T10:34:54.386Z",
+  "lastUpdate": "2026-06-23T08:26:42.457Z",
   "alerteRougeDetectee": true,
   "aujourd_hui": {
-    "date": "2026-06-22",
+    "date": "2026-06-23",
     "niveau": 4,
     "phenomenes": "Canicule"
   },
   "demain": {
-    "date": "2026-06-23",
+    "date": "2026-06-24",
     "niveau": 4,
     "phenomenes": "Canicule"
   }
