@@ -1,8 +1,47 @@
+The current cron `0 5 * * *` actually runs at **5am UTC = 7am Paris** in summer (CEST, UTC+2). Here is the corrected version:
+
+> **Note on DST:** Paris uses two offsets:
+> - **Summer (CEST, UTC+2)** ~late March to late October: 5am Paris = **3am UTC**
+> - **Winter (CET, UTC+1)** ~late October to late March: 5am Paris = **4am UTC**
+>
+> GitHub Actions cron does not support timezones natively, so you have two options:
+
+---
+
+### Option 1: Pick the current offset (summer, UTC+2)
+
+````yaml
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 5h Paris (CEST, UTC+2) - été
+````
+
+This will drift to **4am Paris** in winter.
+
+---
+
+### Option 2: Run both schedules to cover DST changes
+
+````yaml
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 5h Paris en été (CEST, UTC+2)
+    - cron: '0 4 * * *'  # 5h Paris en hiver (CET, UTC+1)
+````
+
+This ensures it always runs at 5am Paris regardless of the season (it will just trigger twice during the DST transition days, but that's harmless with the `if git diff --staged --quiet` guard already in place).
+
+---
+
+### Full corrected workflow (Option 2 recommended)
+
+````yaml
 name: Update Météo Alerts
 
 on:
   schedule:
-    - cron: '0 5 * * *'  # 6h Paris (5h UTC) tous les jours
+    - cron: '0 3 * * *'  # 5h Paris en été (CEST, UTC+2)
+    - cron: '0 4 * * *'  # 5h Paris en hiver (CET, UTC+1)
   workflow_dispatch:  # Permet de lancer manuellement
 
 jobs:
@@ -35,3 +74,4 @@ jobs:
             git commit -m "🤖 Update alerts - $(date +'%Y-%m-%d %H:%M UTC')"
             git push
           fi
+````
